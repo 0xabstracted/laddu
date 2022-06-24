@@ -81,7 +81,7 @@ impl UploadHandler for AWSHandler {
     /// Nothing to do, AWS client ready for the upload.
     async fn prepare(
         &self,
-        _sugar_config: &SugarConfig,
+        _laddu_config: &LadduConfig,
         _assets: &HashMap<usize, AssetPair>,
         _image_indices: &[usize],
         _metadata_indices: &[usize],
@@ -93,7 +93,7 @@ impl UploadHandler for AWSHandler {
     /// Upload the data to AWS S3.
     async fn upload_data(
         &self,
-        _sugar_config: &SugarConfig,
+        _laddu_config: &LadduConfig,
         assets: &HashMap<usize, AssetPair>,
         cache: &mut Cache,
         indices: &[usize],

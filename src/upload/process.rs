@@ -10,7 +10,7 @@ use std::{
 
 use crate::cache::{load_cache, Cache};
 use crate::common::*;
-use crate::config::{data::SugarConfig, get_config_data, UploadMethod};
+use crate::config::{data::LadduConfig, get_config_data, UploadMethod};
 use crate::upload::bundlr::BundlrHandler;
 use crate::upload::*;
 use crate::utils::*;
@@ -22,7 +22,7 @@ pub trait UploadHandler {
     /// Prepares the upload of the specified image/metadata files.
     async fn prepare(
         &self,
-        sugar_config: &SugarConfig,
+        laddu_config: &LadduConfig,
         assets: &HashMap<usize, AssetPair>,
         image_indices: &[usize],
         metadata_indices: &[usize],
@@ -32,7 +32,7 @@ pub trait UploadHandler {
     /// Upload the data to a (permanent) storage.
     async fn upload_data(
         &self,
-        sugar_config: &SugarConfig,
+        laddu_config: &LadduConfig,
         assets: &HashMap<usize, AssetPair>,
         cache: &mut Cache,
         indices: &[usize],
@@ -57,7 +57,7 @@ pub struct AssetType {
 }
 
 pub async fn process_upload(args: UploadArgs) -> Result<()> {
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
     let config_data = get_config_data(&args.config)?;
 
     // loading assets
@@ -228,7 +228,7 @@ pub async fn process_upload(args: UploadArgs) -> Result<()> {
 
         let handler = match config_data.upload_method {
             UploadMethod::Bundlr => Box::new(
-                BundlrHandler::initialize(&get_config_data(&args.config)?, &sugar_config).await?,
+                BundlrHandler::initialize(&get_config_data(&args.config)?, &laddu_config).await?,
             ) as Box<dyn UploadHandler>,
             UploadMethod::AWS => {
                 Box::new(AWSHandler::initialize(&get_config_data(&args.config)?).await?)
@@ -244,7 +244,7 @@ pub async fn process_upload(args: UploadArgs) -> Result<()> {
 
         handler
             .prepare(
-                &sugar_config,
+                &laddu_config,
                 &asset_pairs,
                 &indices.image,
                 &indices.metadata,
@@ -274,7 +274,7 @@ pub async fn process_upload(args: UploadArgs) -> Result<()> {
             errors.extend(
                 handler
                     .upload_data(
-                        &sugar_config,
+                        &laddu_config,
                         &asset_pairs,
                         &mut cache,
                         &indices.image,
@@ -315,7 +315,7 @@ pub async fn process_upload(args: UploadArgs) -> Result<()> {
             errors.extend(
                 handler
                     .upload_data(
-                        &sugar_config,
+                        &laddu_config,
                         &asset_pairs,
                         &mut cache,
                         &indices.animation,
@@ -358,7 +358,7 @@ pub async fn process_upload(args: UploadArgs) -> Result<()> {
             errors.extend(
                 handler
                     .upload_data(
-                        &sugar_config,
+                        &laddu_config,
                         &asset_pairs,
                         &mut cache,
                         &indices.metadata,

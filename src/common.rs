@@ -23,12 +23,12 @@ pub use std::{
 };
 pub use tracing::{debug, error, info, warn};
 
-pub use mpl_candy_machine::accounts as nft_accounts;
-pub use mpl_candy_machine::instruction as nft_instruction;
-pub use mpl_candy_machine::{CandyMachine, WhitelistMintMode, ID as CANDY_MACHINE_PROGRAM_ID};
+pub use magic_hat::accounts as nft_accounts;
+pub use magic_hat::instruction as nft_instruction;
+pub use magic_hat::{MagicHat, WhitelistMintMode, ID as MAGIC_HAT_PROGRAM_ID};
 
 pub use crate::cache::{Cache, CacheItem};
 pub use crate::constants::*;
 pub use crate::errors::*;
 pub use crate::parse::path_to_string;
-pub use crate::setup::{setup_client, sugar_setup};
+pub use crate::setup::{laddu_setup, setup_client};

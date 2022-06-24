@@ -13,13 +13,13 @@ use std::{
 };
 use url::Url;
 
-use crate::candy_machine::CANDY_MACHINE_ID;
 use crate::config::{
     parse_string_as_date, ConfigData, Creator, EndSettingType, EndSettings, GatekeeperConfig,
     HiddenSettings, UploadMethod, WhitelistMintMode, WhitelistMintSettings,
 };
 use crate::constants::*;
-use crate::setup::{setup_client, sugar_setup};
+use crate::magic_hat::MAGIC_HAT_ID;
+use crate::setup::{laddu_setup, setup_client};
 use crate::upload::list_files;
 use crate::utils::{check_spl_token, check_spl_token_account};
 use crate::validate::Metadata;
@@ -120,9 +120,9 @@ pub fn process_create_config(args: CreateConfigArgs) -> Result<()> {
     };
 
     println!(
-        "{} {}Sugar interactive config maker",
+        "{} {}Laddu interactive config maker",
         style("[1/2]").bold().dim(),
-        CANDY_EMOJI
+        MAGICHAT_EMOJI
     );
 
     // checks if we have an assets dir and count the number of files
@@ -155,15 +155,6 @@ pub fn process_create_config(args: CreateConfigArgs) -> Result<()> {
         seller_fee = metadata.seller_fee_basis_points;
     }
 
-    println!("\nCheck out our Candy Machine config docs to learn about the options:");
-    println!(
-        "  -> {}\n",
-        style("https://docs.metaplex.com/candy-machine-v2/configuration")
-            .bold()
-            .magenta()
-            .underlined()
-    );
-
     // price
 
     config_data.price = Input::with_theme(&theme)
@@ -179,14 +170,14 @@ pub fn process_create_config(args: CreateConfigArgs) -> Result<()> {
     config_data.number = if num_files > 0 && (num_files % 2) == 0 && Confirm::with_theme(&theme)
         .with_prompt(
             format!(
-                "Found {} file pairs in \"{}\". Is this how many NFTs you will have in your candy machine?", num_files / 2, args.assets_dir,
+                "Found {} file pairs in \"{}\". Is this how many NFTs you will have in your Magic Hat?", num_files / 2, args.assets_dir,
             )
         )
         .interact()? {
         (num_files / 2) as u64
     } else {
         Input::with_theme(&theme)
-            .with_prompt("How many NFTs will you have in your candy machine?")
+            .with_prompt("How many NFTs will you have in your Magic Hat?")
             .validate_with(number_validator)
             .interact()
             .unwrap().parse::<u64>().expect("Failed to parse number into u64 that should have already been validated.")
@@ -336,9 +327,9 @@ pub fn process_create_config(args: CreateConfigArgs) -> Result<()> {
 
     // SPL token mint
 
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
-    let client = Arc::new(setup_client(&sugar_config)?);
-    let program = client.program(CANDY_MACHINE_ID);
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
+    let client = Arc::new(setup_client(&laddu_config)?);
+    let program = client.program(MAGIC_HAT_ID);
 
     if choices.contains(&SPL_INDEX) {
         config_data.sol_treasury_account = None;
@@ -391,7 +382,7 @@ pub fn process_create_config(args: CreateConfigArgs) -> Result<()> {
         let civic_network = Pubkey::from_str(CIVIC_NETWORK).unwrap();
         let encore_network = Pubkey::from_str(ENCORE_NETWORK).unwrap();
         let selection = Select::with_theme(&theme)
-            .with_prompt("Which gatekeeper network do you want to use? Check https://docs.metaplex.com/candy-machine-v2/configuration#provider-networks for more info.")
+            .with_prompt("Which gatekeeper network do you want to use? ")
             .items(&gatekeeper_options)
             .default(0)
             .interact()?;
@@ -486,7 +477,7 @@ pub fn process_create_config(args: CreateConfigArgs) -> Result<()> {
                     if num.parse::<u64>().unwrap() < config_data.number {
                         Ok(())
                     } else {
-                        Err("Your end settings amount cannot be more than the number of items in your candy machine.")
+                        Err("Your end settings amount cannot be more than the number of items in your Magic Hat.")
                     }
                 })
                 .interact()

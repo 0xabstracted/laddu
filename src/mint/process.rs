@@ -13,9 +13,9 @@ use anchor_lang::prelude::AccountMeta;
 use anyhow::Result;
 use chrono::Utc;
 use console::style;
-use mpl_candy_machine::instruction as nft_instruction;
-use mpl_candy_machine::{accounts as nft_accounts, CollectionPDA};
-use mpl_candy_machine::{CandyError, CandyMachine, EndSettingType, WhitelistMintMode};
+use magic_hat::instruction as nft_instruction;
+use magic_hat::{accounts as nft_accounts, CollectionPDA};
+use magic_hat::{EndSettingType, MagicHat, MagicHatError, WhitelistMintMode};
 use mpl_token_metadata::pda::find_collection_authority_account;
 use solana_client::rpc_response::Response;
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
@@ -26,10 +26,10 @@ use spl_token::{
 };
 
 use crate::cache::load_cache;
-use crate::candy_machine::CANDY_MACHINE_ID;
-use crate::candy_machine::*;
 use crate::common::*;
 use crate::config::Cluster;
+use crate::magic_hat::MAGIC_HAT_ID;
+use crate::magic_hat::*;
 use crate::pdas::*;
 use crate::utils::*;
 
@@ -38,58 +38,58 @@ pub struct MintArgs {
     pub rpc_url: Option<String>,
     pub cache: String,
     pub number: Option<u64>,
-    pub candy_machine: Option<String>,
+    pub magic_hat: Option<String>,
 }
 
 pub fn process_mint(args: MintArgs) -> Result<()> {
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
-    let client = Arc::new(setup_client(&sugar_config)?);
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
+    let client = Arc::new(setup_client(&laddu_config)?);
 
-    // the candy machine id specified takes precedence over the one from the cache
+    // the magic hat id specified takes precedence over the one from the cache
 
-    let candy_machine_id = match args.candy_machine {
-        Some(candy_machine_id) => candy_machine_id,
+    let magic_hat_id = match args.magic_hat {
+        Some(magic_hat_id) => magic_hat_id,
         None => {
             let cache = load_cache(&args.cache, false)?;
-            cache.program.candy_machine
+            cache.program.magic_hat
         }
     };
 
-    let candy_pubkey = match Pubkey::from_str(&candy_machine_id) {
-        Ok(candy_pubkey) => candy_pubkey,
+    let magichat_pubkey = match Pubkey::from_str(&magic_hat_id) {
+        Ok(magichat_pubkey) => magichat_pubkey,
         Err(_) => {
-            let error = anyhow!("Failed to parse candy machine id: {}", candy_machine_id);
+            let error = anyhow!("Failed to parse Magic Hat id: {}", magic_hat_id);
             error!("{:?}", error);
             return Err(error);
         }
     };
 
     println!(
-        "{} {}Loading candy machine",
+        "{} {}Loading Magic Hat",
         style("[1/2]").bold().dim(),
         LOOKING_GLASS_EMOJI
     );
-    println!("{} {}", style("Candy machine ID:").bold(), candy_machine_id);
+    println!("{} {}", style("Magic Hat ID:").bold(), magic_hat_id);
 
     let pb = spinner_with_style();
     pb.set_message("Connecting...");
 
-    let candy_machine_state = Arc::new(get_candy_machine_state(&sugar_config, &candy_pubkey)?);
+    let magic_hat_state = Arc::new(get_magic_hat_state(&laddu_config, &magichat_pubkey)?);
 
     let collection_pda_info =
-        Arc::new(get_collection_pda(&candy_pubkey, &client.program(CANDY_MACHINE_ID)).ok());
+        Arc::new(get_collection_pda(&magichat_pubkey, &client.program(MAGIC_HAT_ID)).ok());
 
     pb.finish_with_message("Done");
 
     println!(
-        "{} {}Minting from candy machine",
+        "{} {}Minting from Magic Hat",
         style("[2/2]").bold().dim(),
-        CANDY_EMOJI
+        MAGICHAT_EMOJI
     );
-    println!("Candy machine ID: {}", &candy_machine_id);
+    println!("Magic Hat ID: {}", &magic_hat_id);
 
     let number = args.number.unwrap_or(1);
-    let available = candy_machine_state.data.items_available - candy_machine_state.items_redeemed;
+    let available = magic_hat_state.data.items_available - magic_hat_state.items_redeemed;
 
     if number > available || number == 0 {
         let error = anyhow!("{} item(s) available, requested {}", available, number);
@@ -97,20 +97,20 @@ pub fn process_mint(args: MintArgs) -> Result<()> {
         return Err(error);
     }
 
-    info!("Minting NFT from candy machine: {}", &candy_machine_id);
-    info!("Candy machine program id: {:?}", CANDY_MACHINE_ID);
+    info!("Minting NFT from Magic Hat: {}", &magic_hat_id);
+    info!("Magic Hat program id: {:?}", MAGIC_HAT_ID);
 
     if number == 1 {
         let pb = spinner_with_style();
         pb.set_message(format!(
             "{} item(s) remaining",
-            candy_machine_state.data.items_available - candy_machine_state.items_redeemed
+            magic_hat_state.data.items_available - magic_hat_state.items_redeemed
         ));
 
         let result = match mint(
             Arc::clone(&client),
-            candy_pubkey,
-            Arc::clone(&candy_machine_state),
+            magichat_pubkey,
+            Arc::clone(&magic_hat_state),
             Arc::clone(&collection_pda_info),
         ) {
             Ok(signature) => format!("{} {}", style("Signature:").bold(), signature),
@@ -128,8 +128,8 @@ pub fn process_mint(args: MintArgs) -> Result<()> {
         for _i in 0..number {
             if let Err(err) = mint(
                 Arc::clone(&client),
-                candy_pubkey,
-                Arc::clone(&candy_machine_state),
+                magichat_pubkey,
+                Arc::clone(&magic_hat_state),
                 Arc::clone(&collection_pda_info),
             ) {
                 pb.abandon_with_message(format!("{}", style("Mint failed ").red().bold()));
@@ -148,31 +148,31 @@ pub fn process_mint(args: MintArgs) -> Result<()> {
 
 pub fn mint(
     client: Arc<Client>,
-    candy_machine_id: Pubkey,
-    candy_machine_state: Arc<CandyMachine>,
+    magic_hat_id: Pubkey,
+    magic_hat_state: Arc<MagicHat>,
     collection_pda_info: Arc<Option<PdaInfo<CollectionPDA>>>,
 ) -> Result<Signature> {
-    let program = client.program(CANDY_MACHINE_ID);
+    let program = client.program(MAGIC_HAT_ID);
     let payer = program.payer();
-    let wallet = candy_machine_state.wallet;
+    let wallet = magic_hat_state.wallet;
 
-    let candy_machine_data = &candy_machine_state.data;
+    let magic_hat_data = &magic_hat_state.data;
 
-    if let Some(_gatekeeper) = &candy_machine_data.gatekeeper {
+    if let Some(_gatekeeper) = &magic_hat_data.gatekeeper {
         return Err(anyhow!(
             "Command-line mint disabled (gatekeeper settings in use)"
         ));
-    } else if candy_machine_state.items_redeemed >= candy_machine_data.items_available {
-        return Err(anyhow!(CandyError::CandyMachineEmpty));
+    } else if magic_hat_state.items_redeemed >= magic_hat_data.items_available {
+        return Err(anyhow!(MagicHatError::MagicHatEmpty));
     }
 
-    if candy_machine_state.authority != payer {
+    if magic_hat_state.authority != payer {
         // we are not authority, we need to follow the rules
         // 1. go_live_date
         // 2. whitelist mint settings
         // 3. end settings
         let mint_date = Utc::now().timestamp();
-        let mut mint_enabled = if let Some(date) = candy_machine_data.go_live_date {
+        let mut mint_enabled = if let Some(date) = magic_hat_data.go_live_date {
             // mint will be enabled only if the go live date is earlier
             // than the current date
             date < mint_date
@@ -181,33 +181,33 @@ pub fn mint(
             false
         };
 
-        if let Some(wl_mint_settings) = &candy_machine_data.whitelist_mint_settings {
+        if let Some(wl_mint_settings) = &magic_hat_data.whitelist_mint_settings {
             if wl_mint_settings.presale {
                 // we (temporarily) enable the mint - we will validate if the user
                 // has the wl token when creating the transaction
                 mint_enabled = true;
             } else if !mint_enabled {
-                return Err(anyhow!(CandyError::CandyMachineNotLive));
+                return Err(anyhow!(MagicHatError::MagicHatNotLive));
             }
         }
 
         if !mint_enabled {
             // no whitelist mint settings (or no presale) and we are earlier than
             // go live date
-            return Err(anyhow!(CandyError::CandyMachineNotLive));
+            return Err(anyhow!(MagicHatError::MagicHatNotLive));
         }
 
-        if let Some(end_settings) = &candy_machine_data.end_settings {
+        if let Some(end_settings) = &magic_hat_data.end_settings {
             match end_settings.end_setting_type {
                 EndSettingType::Date => {
                     if (end_settings.number as i64) < mint_date {
-                        return Err(anyhow!(CandyError::CandyMachineNotLive));
+                        return Err(anyhow!(MagicHatError::MagicHatNotLive));
                     }
                 }
                 EndSettingType::Amount => {
-                    if candy_machine_state.items_redeemed >= end_settings.number {
+                    if magic_hat_state.items_redeemed >= end_settings.number {
                         return Err(anyhow!(
-                            "Candy machine is not live (end settings amount reached)"
+                            "Magic Hat is not live (end settings amount reached)"
                         ));
                     }
                 }
@@ -261,7 +261,7 @@ pub fn mint(
     let mut additional_accounts: Vec<AccountMeta> = Vec::new();
 
     // Check whitelist mint settings
-    if let Some(wl_mint_settings) = &candy_machine_data.whitelist_mint_settings {
+    if let Some(wl_mint_settings) = &magic_hat_data.whitelist_mint_settings {
         let whitelist_token_account = get_associated_token_address(&payer, &wl_mint_settings.mint);
 
         additional_accounts.push(AccountMeta {
@@ -299,12 +299,12 @@ pub fn mint(
             }
 
             if !token_found {
-                return Err(anyhow!(CandyError::NoWhitelistToken));
+                return Err(anyhow!(MagicHatError::NoWhitelistToken));
             }
         }
     }
 
-    if let Some(token_mint) = candy_machine_state.token_mint {
+    if let Some(token_mint) = magic_hat_state.token_mint {
         let user_token_account_info = get_associated_token_address(&payer, &token_mint);
 
         additional_accounts.push(AccountMeta {
@@ -322,14 +322,13 @@ pub fn mint(
 
     let metadata_pda = find_metadata_pda(&nft_mint.pubkey());
     let master_edition_pda = find_master_edition_pda(&nft_mint.pubkey());
-    let (candy_machine_creator_pda, creator_bump) =
-        find_candy_machine_creator_pda(&candy_machine_id);
+    let (magic_hat_creator_pda, creator_bump) = find_magic_hat_creator_pda(&magic_hat_id);
 
     let mint_ix = program
         .request()
         .accounts(nft_accounts::MintNFT {
-            candy_machine: candy_machine_id,
-            candy_machine_creator: candy_machine_creator_pda,
+            magic_hat: magic_hat_id,
+            magic_hat_creator: magic_hat_creator_pda,
             payer,
             wallet,
             metadata: metadata_pda,
@@ -368,7 +367,7 @@ pub fn mint(
             find_collection_authority_account(&collection_pda.mint, collection_pda_pubkey).0;
         builder = builder
             .accounts(nft_accounts::SetCollectionDuringMint {
-                candy_machine: candy_machine_id,
+                magic_hat: magic_hat_id,
                 metadata: metadata_pda,
                 payer,
                 collection_pda: *collection_pda_pubkey,

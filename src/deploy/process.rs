@@ -20,20 +20,20 @@ use std::{
     },
 };
 
-use mpl_candy_machine::accounts as nft_accounts;
-use mpl_candy_machine::instruction as nft_instruction;
-use mpl_candy_machine::{CandyMachineData, ConfigLine, Creator as CandyCreator};
+use magic_hat::accounts as nft_accounts;
+use magic_hat::instruction as nft_instruction;
+use magic_hat::{ConfigLine, Creator as MagicHatCreator, MagicHatData};
 pub use mpl_token_metadata::state::{
     MAX_CREATOR_LIMIT, MAX_NAME_LENGTH, MAX_SYMBOL_LENGTH, MAX_URI_LENGTH,
 };
 
 use crate::cache::*;
-use crate::candy_machine::{parse_config_price, CANDY_MACHINE_ID};
 use crate::common::*;
 use crate::config::{data::*, parser::get_config_data};
 use crate::deploy::data::*;
 use crate::deploy::errors::*;
-use crate::setup::{setup_client, sugar_setup};
+use crate::magic_hat::{parse_config_price, MAGIC_HAT_ID};
+use crate::setup::{laddu_setup, setup_client};
 use crate::utils::*;
 use crate::validate::parser::{check_name, check_seller_fee_basis_points, check_symbol, check_url};
 
@@ -44,7 +44,7 @@ const MAX_TRANSACTION_BYTES: usize = 1000;
 const MAX_TRANSACTION_LINES: usize = 17;
 
 struct TxInfo {
-    candy_pubkey: Pubkey,
+    magichat_pubkey: Pubkey,
     payer: Keypair,
     chunk: Vec<(u32, ConfigLine)>,
 }
@@ -83,13 +83,13 @@ pub async fn process_deploy(args: DeployArgs) -> Result<()> {
         }
     }
 
-    let sugar_config = Arc::new(sugar_setup(args.keypair, args.rpc_url)?);
-    let client = setup_client(&sugar_config)?;
+    let laddu_config = Arc::new(laddu_setup(args.keypair, args.rpc_url)?);
+    let client = setup_client(&laddu_config)?;
     let config_data = get_config_data(&args.config)?;
 
-    let candy_machine_address = &cache.program.candy_machine;
+    let magic_hat_address = &cache.program.magic_hat;
 
-    // checks the candy machine data
+    // checks the magic hat data
 
     let num_items = config_data.number;
     let hidden = config_data.hidden_settings.is_some();
@@ -105,23 +105,23 @@ pub async fn process_deploy(args: DeployArgs) -> Result<()> {
         check_seller_fee_basis_points(config_data.seller_fee_basis_points)?;
     }
 
-    let candy_pubkey = if candy_machine_address.is_empty() {
+    let magichat_pubkey = if magic_hat_address.is_empty() {
         println!(
-            "{} {}Creating candy machine",
+            "{} {}Creating Magic Hat",
             style(if hidden { "[1/1]" } else { "[1/2]" }).bold().dim(),
-            CANDY_EMOJI
+            MAGICHAT_EMOJI
         );
-        info!("Candy machine address is empty, creating new candy machine...");
+        info!("Magic Hat address is empty, creating new Magic Hat...");
 
         let spinner = spinner_with_style();
-        spinner.set_message("Creating candy machine...");
+        spinner.set_message("Creating Magic Hat...");
 
-        let candy_keypair = Keypair::generate(&mut OsRng);
-        let candy_pubkey = candy_keypair.pubkey();
+        let magichat_keypair = Keypair::generate(&mut OsRng);
+        let magichat_pubkey = magichat_keypair.pubkey();
 
         let uuid = DEFAULT_UUID.to_string();
-        let candy_data = create_candy_machine_data(&client, &config_data, uuid)?;
-        let program = client.program(CANDY_MACHINE_ID);
+        let magichat_data = create_magic_hat_data(&client, &config_data, uuid)?;
+        let program = client.program(MAGIC_HAT_ID);
 
         let treasury_wallet = match config_data.spl_token {
             Some(spl_token) => {
@@ -150,54 +150,53 @@ pub async fn process_deploy(args: DeployArgs) -> Result<()> {
             }
             None => match config_data.sol_treasury_account {
                 Some(sol_treasury_account) => sol_treasury_account,
-                None => sugar_config.keypair.pubkey(),
+                None => laddu_config.keypair.pubkey(),
             },
         };
 
-        // all good, let's create the candy machine
+        // all good, let's create the magic hat
 
-        let sig = initialize_candy_machine(
+        let sig = initialize_magic_hat(
             &config_data,
-            &candy_keypair,
-            candy_data,
+            &magichat_keypair,
+            magichat_data,
             treasury_wallet,
             program,
         )?;
-        info!("Candy machine initialized with sig: {}", sig);
+        info!("Magic Hat initialized with sig: {}", sig);
         info!(
-            "Candy machine created with address: {}",
-            &candy_pubkey.to_string()
+            "Magic Hat created with address: {}",
+            &magichat_pubkey.to_string()
         );
 
-        cache.program = CacheProgram::new_from_cm(&candy_pubkey);
+        cache.program = CacheProgram::new_from_cm(&magichat_pubkey);
         cache.sync_file()?;
 
         spinner.finish_and_clear();
 
-        candy_pubkey
+        magichat_pubkey
     } else {
         println!(
-            "{} {}Loading candy machine",
+            "{} {}Loading Magic Hat",
             style(if hidden { "[1/1]" } else { "[1/2]" }).bold().dim(),
-            CANDY_EMOJI
+            MAGICHAT_EMOJI
         );
 
-        match Pubkey::from_str(candy_machine_address) {
+        match Pubkey::from_str(magic_hat_address) {
             Ok(pubkey) => pubkey,
             Err(_err) => {
                 error!(
-                    "Invalid candy machine address in cache file: {}!",
-                    candy_machine_address
+                    "Invalid Magic Hat address in cache file: {}!",
+                    magic_hat_address
                 );
-                return Err(CacheError::InvalidCandyMachineAddress(
-                    candy_machine_address.to_string(),
-                )
-                .into());
+                return Err(
+                    CacheError::InvalidMagicHatAddress(magic_hat_address.to_string()).into(),
+                );
             }
         }
     };
 
-    println!("{} {}", style("Candy machine ID:").bold(), candy_pubkey);
+    println!("{} {}", style("Magic Hat ID:").bold(), magichat_pubkey);
 
     if !hidden {
         println!(
@@ -215,8 +214,8 @@ pub async fn process_deploy(args: DeployArgs) -> Result<()> {
             args.interrupted.store(false, Ordering::SeqCst);
 
             let errors = upload_config_lines(
-                sugar_config,
-                candy_pubkey,
+                laddu_config,
+                magichat_pubkey,
                 &mut cache,
                 config_lines,
                 args.interrupted,
@@ -245,42 +244,45 @@ pub async fn process_deploy(args: DeployArgs) -> Result<()> {
             }
         }
     } else {
-        println!("\nCandy machine with hidden settings deployed.");
+        println!("\nMagic Hat with hidden settings deployed.");
     }
 
     Ok(())
 }
 
-/// Create the candy machine data struct.
-fn create_candy_machine_data(
+/// Create the magic hat data struct.
+fn create_magic_hat_data(
     client: &Client,
     config: &ConfigData,
     uuid: String,
-) -> Result<CandyMachineData> {
+) -> Result<MagicHatData> {
     let go_live_date = Some(go_live_date_as_timestamp(&config.go_live_date)?);
 
-    let end_settings = config.end_settings.as_ref().map(|s| s.into_candy_format());
+    let end_settings = config
+        .end_settings
+        .as_ref()
+        .map(|s| s.into_magichat_format());
 
     let whitelist_mint_settings = config
         .whitelist_mint_settings
         .as_ref()
-        .map(|s| s.into_candy_format());
+        .map(|s| s.into_magichat_format());
 
     let hidden_settings = config
         .hidden_settings
         .as_ref()
-        .map(|s| s.into_candy_format());
+        .map(|s| s.into_magichat_format());
 
     let gatekeeper = config
         .gatekeeper
         .as_ref()
-        .map(|gatekeeper| gatekeeper.into_candy_format());
+        .map(|gatekeeper| gatekeeper.into_magichat_format());
 
-    let mut creators: Vec<CandyCreator> = Vec::new();
+    let mut creators: Vec<MagicHatCreator> = Vec::new();
     let mut share = 0u32;
 
     for creator in &config.creators {
-        let c = creator.into_candy_format()?;
+        let c = creator.into_magichat_format()?;
         share += c.share as u32;
 
         creators.push(c);
@@ -302,7 +304,7 @@ fn create_candy_machine_data(
 
     let price = parse_config_price(client, config)?;
 
-    let data = CandyMachineData {
+    let data = MagicHatData {
         uuid,
         price,
         symbol: config.symbol.clone(),
@@ -376,18 +378,18 @@ fn generate_config_lines(
     Ok(config_lines)
 }
 
-/// Send the `initialize_candy_machine` instruction to the candy machine program.
-fn initialize_candy_machine(
+/// Send the `initialize_magic_hat` instruction to the magic hat program.
+fn initialize_magic_hat(
     config_data: &ConfigData,
-    candy_account: &Keypair,
-    candy_machine_data: CandyMachineData,
+    magichat_account: &Keypair,
+    magic_hat_data: MagicHatData,
     treasury_wallet: Pubkey,
     program: Program,
 ) -> Result<Signature> {
     let payer = program.payer();
-    let items_available = candy_machine_data.items_available;
+    let items_available = magic_hat_data.items_available;
 
-    let candy_account_size = if candy_machine_data.hidden_settings.is_some() {
+    let magichat_account_size = if magic_hat_data.hidden_settings.is_some() {
         CONFIG_ARRAY_START
     } else {
         CONFIG_ARRAY_START
@@ -398,14 +400,14 @@ fn initialize_candy_machine(
     };
 
     info!(
-        "Initializing candy machine with account size of: {} and address of: {}",
-        candy_account_size,
-        candy_account.pubkey().to_string()
+        "Initializing Magic Hat with account size of: {} and address of: {}",
+        magichat_account_size,
+        magichat_account.pubkey().to_string()
     );
 
     let lamports = program
         .rpc()
-        .get_minimum_balance_for_rent_exemption(candy_account_size)?;
+        .get_minimum_balance_for_rent_exemption(magichat_account_size)?;
 
     let balance = program.rpc().get_account(&payer)?.lamports;
 
@@ -421,22 +423,22 @@ fn initialize_candy_machine(
         .request()
         .instruction(system_instruction::create_account(
             &payer,
-            &candy_account.pubkey(),
+            &magichat_account.pubkey(),
             lamports,
-            candy_account_size as u64,
+            magichat_account_size as u64,
             &program.id(),
         ))
-        .signer(candy_account)
-        .accounts(nft_accounts::InitializeCandyMachine {
-            candy_machine: candy_account.pubkey(),
+        .signer(magichat_account)
+        .accounts(nft_accounts::InitializeMagicHat {
+            magic_hat: magichat_account.pubkey(),
             wallet: treasury_wallet,
             authority: payer,
             payer,
             system_program: system_program::id(),
             rent: sysvar::rent::ID,
         })
-        .args(nft_instruction::InitializeCandyMachine {
-            data: candy_machine_data,
+        .args(nft_instruction::InitializeMagicHat {
+            data: magic_hat_data,
         });
 
     if let Some(token) = config_data.spl_token {
@@ -452,10 +454,10 @@ fn initialize_candy_machine(
     Ok(sig)
 }
 
-/// Send the config lines to the candy machine program.
+/// Send the config lines to the magic hat program.
 async fn upload_config_lines(
-    sugar_config: Arc<SugarConfig>,
-    candy_pubkey: Pubkey,
+    laddu_config: Arc<LadduConfig>,
+    magichat_pubkey: Pubkey,
     cache: &mut Cache,
     config_lines: Vec<Vec<(u32, ConfigLine)>>,
     interrupted: Arc<AtomicBool>,
@@ -473,11 +475,11 @@ async fn upload_config_lines(
     let mut transactions = Vec::new();
 
     for chunk in config_lines {
-        let keypair = bs58::encode(sugar_config.keypair.to_bytes()).into_string();
+        let keypair = bs58::encode(laddu_config.keypair.to_bytes()).into_string();
         let payer = Keypair::from_base58_string(&keypair);
 
         transactions.push(TxInfo {
-            candy_pubkey,
+            magichat_pubkey,
             payer,
             chunk,
         });
@@ -486,7 +488,7 @@ async fn upload_config_lines(
     let mut handles = Vec::new();
 
     for tx in transactions.drain(0..cmp::min(transactions.len(), PARALLEL_LIMIT)) {
-        let config = sugar_config.clone();
+        let config = laddu_config.clone();
         handles.push(tokio::spawn(
             async move { add_config_lines(config, tx).await },
         ));
@@ -536,7 +538,7 @@ async fn upload_config_lines(
                 cache.sync_file()?;
 
                 for tx in transactions.drain(0..cmp::min(transactions.len(), PARALLEL_LIMIT / 2)) {
-                    let config = sugar_config.clone();
+                    let config = laddu_config.clone();
                     handles.push(tokio::spawn(
                         async move { add_config_lines(config, tx).await },
                     ));
@@ -563,10 +565,10 @@ async fn upload_config_lines(
     Ok(errors)
 }
 
-/// Send the `add_config_lines` instruction to the candy machine program.
-async fn add_config_lines(config: Arc<SugarConfig>, tx_info: TxInfo) -> Result<Vec<u32>> {
+/// Send the `add_config_lines` instruction to the magic hat program.
+async fn add_config_lines(config: Arc<LadduConfig>, tx_info: TxInfo) -> Result<Vec<u32>> {
     let client = setup_client(&config)?;
-    let program = client.program(CANDY_MACHINE_ID);
+    let program = client.program(MAGIC_HAT_ID);
 
     // this will be used to update the cache
     let mut indices: Vec<u32> = Vec::new();
@@ -583,7 +585,7 @@ async fn add_config_lines(config: Arc<SugarConfig>, tx_info: TxInfo) -> Result<V
     let _sig = program
         .request()
         .accounts(nft_accounts::AddConfigLines {
-            candy_machine: tx_info.candy_pubkey,
+            magic_hat: tx_info.magichat_pubkey,
             authority: program.payer(),
         })
         .args(nft_instruction::AddConfigLines {

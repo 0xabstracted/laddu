@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Sugar CLI - Candy Machine automated test
+# Laddu CLI - Magic Hat automated test
 #
 # To suppress prompts, you will need to set/export the following variables:
 #
@@ -33,9 +33,9 @@ SCRIPT_DIR=$(cd -- $(dirname -- "${BASH_SOURCE[0]}") &>/dev/null && pwd)
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 ASSETS_DIR=$CURRENT_DIR/assets
 CACHE_DIR=$CURRENT_DIR
-SUGAR_BIN="cargo run --bin sugar --"
-SUGAR_LOG="sugar.log"
-RESUME_FILE="$SCRIPT_DIR/.sugar_resume"
+LADDU_BIN="cargo run --bin laddu --"
+LADDU_LOG="laddu.log"
+RESUME_FILE="$SCRIPT_DIR/.laddu_resume"
 
 # Remote files to test the upload
 PNG_MIN="https://arweave.net/N3LqmO6yURUK1JxV9MJtH8YeqppEtZhKuy3RB0Tqm3A/?ext=png"
@@ -106,6 +106,12 @@ function devnet_env() {
     STORAGE="bundlr"
 }
 
+function localhost_env() {
+    ENV_URL="localhost"
+    RPC="http://localhost:8899"
+    STORAGE="bundlr"
+}
+
 #-----------------------------------------------------------------------------#
 # SETUP                                                                       #
 #-----------------------------------------------------------------------------#
@@ -113,7 +119,7 @@ function devnet_env() {
 RESUME=0
 
 echo ""
-CYN "Sugar CLI - Candy Machine automated test"
+CYN "Laddu CLI - Magic Hat automated test"
 CYN "----------------------------------------"
 
 echo ""
@@ -124,13 +130,14 @@ echo "3. devnet (default)"
 echo "4. manual cache"
 echo "5. hidden settings"
 echo "6. animation"
-echo "7. sugar launch"
+echo "7. laddu launch"
+echo "8. localnet"
 
 if [ -f "$RESUME_FILE" ]; then
-    echo "8. previous run ($(RED "resume"))"
-    echo -n "$(CYN "Select test template [1-8]") (default 3): "
+    echo "9. previous run ($(RED "resume"))"
+    echo -n "$(CYN "Select test template [1-9]") (default 3): "
 else
-    echo -n "$(CYN "Select test template [1-7]") (default 3): "
+    echo -n "$(CYN "Select test template [1-8]") (default 3): "
 fi
 
 read Template
@@ -165,6 +172,11 @@ case "$Template" in
         LAUNCH="Y"
     ;;
     8)
+        localhost_env        
+        default_settings
+
+    ;;
+    9)
         source $RESUME_FILE
         RESUME=1
         RESET="n"
@@ -184,11 +196,13 @@ if [ -z ${ENV_URL+x} ]; then
     CYN "Environment:"
     echo "1. devnet (default)"
     echo "2. mainnet-beta"
+    echo "3. localnet"
     echo -n "$(CYN "Select the environment [1-2]") (default 1): "
     read Input
     case "$Input" in
         1) ENV_URL="devnet" ;;
         2) ENV_URL="mainnet-beta" ;;
+        3) http://localhost:8899 ;;
     esac
 fi
 
@@ -400,7 +414,7 @@ fi
 
 if [ -z ${CLOSE+x} ]; then
     echo ""
-    echo -n "$(CYN "Close candy machine and withdraw funds at the end [Y/n]") (default 'Y'): "
+    echo -n "$(CYN "Close magichat and withdraw funds at the end [Y/n]") (default 'Y'): "
     read CLOSE
     if [ -z "$CLOSE" ]; then
         CLOSE="Y"
@@ -416,7 +430,7 @@ echo ""
 # Wallet keypair file
 
 WALLET_KEY="$(solana config get keypair | cut -d : -f 2)"
-CACHE_NAME="sugar-test"
+CACHE_NAME="laddu-test"
 CACHE_FILE="$CACHE_DIR/cache-${CACHE_NAME}.json"
 LAST_INDEX=$((ITEMS - 1))
 
@@ -427,7 +441,7 @@ function clean_up {
     rm $CONFIG_FILE 2>/dev/null
     rm -rf $ASSETS_DIR 2>/dev/null
     rm -rf $CACHE_FILE 2>/dev/null
-    rm -rf $SUGAR_LOG 2>/dev/null
+    rm -rf $LADDU_LOG 2>/dev/null
     rm -rf test_item 2>/dev/null
 }
 
@@ -441,17 +455,17 @@ read -r -d $'\0' METADATA <<-EOM
 {
     "name": "[$TIMESTAMP] Test #%s",
     "symbol": "TEST",
-    "description": "Sugar CLI Test #%s",
+    "description": "Laddu CLI Test #%s",
     "seller_fee_basis_points": 500,
     "image": "%s"%b
-    "attributes": [{"trait_type": "Flavour", "value": "Sugar"}],
+    "attributes": [{"trait_type": "Flavour", "value": "Laddu"}],
     "properties": {
         "files": [
         {
             "uri": "%s",
             "type": "%s"
         }%b
-        "category": "Sugar Test"
+        "category": "Laddu Test"
     }
 }
 EOM
@@ -509,7 +523,7 @@ if [ $RESUME -eq 0 ]; then
     fi
 
     if [ "$MANUAL_CACHE" == "Y" ]; then
-        echo -n "{\"program\":{\"candyMachine\":\"\", \"candyMachineCreator\":\"\"}, \"items\":{" >> $CACHE_FILE
+        echo -n "{\"program\":{\"magicHat\":\"\", \"magicHatCreator\":\"\"}, \"items\":{" >> $CACHE_FILE
         
         for ((i = 0; i < $ITEMS; i++)); do
             if [ "$i" -gt "0" ]; then
@@ -524,7 +538,7 @@ if [ $RESUME -eq 0 ]; then
     fi
 fi
 
-# Candy Machine configuration
+# Magic Hat configuration
 
 CONFIG_FILE="config.json"
 
@@ -608,7 +622,7 @@ function change_cache {
 
 # run the upload command
 function upload {
-    $SUGAR_BIN upload -c ${CONFIG_FILE} --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC $ASSETS_DIR
+    $LADDU_BIN upload -c ${CONFIG_FILE} --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC $ASSETS_DIR
     EXIT_CODE=$?
     if [ ! $EXIT_CODE -eq 0 ]; then
         MAG "<<<"
@@ -619,7 +633,7 @@ function upload {
 
 # run the deploy command
 function deploy {
-    $SUGAR_BIN deploy -c ${CONFIG_FILE} --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC
+    $LADDU_BIN deploy -c ${CONFIG_FILE} --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC
     EXIT_CODE=$?
     if [ ! $EXIT_CODE -eq 0 ]; then
         MAG "<<<"
@@ -630,7 +644,7 @@ function deploy {
 
 # run the verify upload command
 function verify {
-    $SUGAR_BIN verify --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC
+    $LADDU_BIN verify --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC
     EXIT_CODE=$?
     if [ ! $EXIT_CODE -eq 0 ]; then
         MAG "<<<"
@@ -648,7 +662,7 @@ if [ "${CHANGE}" = "Y" ] && [ "$(command -v jq)" = "" ]; then
     CHANGE="n"
 fi
 
-echo "[$(date "+%T")] Deploying Candy Machine with $ITEMS items"
+echo "[$(date "+%T")] Deploying Magic Hat with $ITEMS items"
 echo "[$(date "+%T")] Environment: ${ENV_URL}"
 echo "[$(date "+%T")] RPC URL: ${RPC}"
 echo "[$(date "+%T")] Testing started using ${STORAGE} storage"
@@ -659,10 +673,10 @@ fi
 
 if [ "$LAUNCH" = "Y" ]; then
     echo ""
-    CYN "Executing Sugar launch: steps [1, 2, 3, 4]"
+    CYN "Executing Laddu launch: steps [1, 2, 3, 4]"
     echo ""
     MAG ">>>"
-    $SUGAR_BIN launch -c ${CONFIG_FILE} --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC $ASSETS_DIR
+    $LADDU_BIN launch -c ${CONFIG_FILE} --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC $ASSETS_DIR
     EXIT_CODE=$?
     MAG "<<<"
     
@@ -675,7 +689,7 @@ else
     CYN "1. Validating JSON metadata files"
     echo ""
     MAG ">>>"
-    $SUGAR_BIN validate $ASSETS_DIR
+    $LADDU_BIN validate $ASSETS_DIR
     EXIT_CODE=$?
     MAG "<<<"
 
@@ -693,7 +707,7 @@ else
     echo ""
 
     echo ""
-    CYN "3. Deploying Candy Machine"
+    CYN "3. Deploying Magic Hat"
     echo ""
     MAG ">>>"
     deploy
@@ -725,7 +739,7 @@ echo ""
 CYN "6. Minting"
 echo ""
 MAG ">>>"
-$SUGAR_BIN mint --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC -n $MULTIPLE
+$LADDU_BIN mint --keypair $WALLET_KEY --cache $CACHE_FILE -r $RPC -n $MULTIPLE
 EXIT_CODE=$?
 MAG "<<<"
 
@@ -735,12 +749,12 @@ if [ ! $EXIT_CODE -eq 0 ]; then
 fi
 
 if [ "${CLOSE}" = "Y" ]; then
-    CANDY_MACHINE_ID=`cat $CACHE_FILE | sed -n -e 's/^\(.*\)\(\"candyMachine\":\"\)\([a-zA-Z0-9]*\)\(.*\)$/\3/p'`
+    MAGIC_HAT_ID=`cat $CACHE_FILE | sed -n -e 's/^\(.*\)\(\"magicHat\":\"\)\([a-zA-Z0-9]*\)\(.*\)$/\3/p'`
     echo ""
-    CYN "7. Withdrawing Candy Machine funds and clean up"
+    CYN "7. Withdrawing Magic Hat funds and clean up"
     echo ""
     MAG ">>>"
-    $SUGAR_BIN withdraw --keypair $WALLET_KEY -r $RPC --candy-machine $CANDY_MACHINE_ID
+    $LADDU_BIN withdraw --keypair $WALLET_KEY -r $RPC --magic-hat $MAGIC_HAT_ID
     EXIT_CODE=$?
     MAG "<<<"
     

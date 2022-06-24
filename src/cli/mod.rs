@@ -33,7 +33,7 @@ pub enum Commands {
         #[clap(default_value = DEFAULT_ASSETS)]
         assets_dir: String,
     },
-    /// Create a candy machine deployment from assets
+    /// Create a magic hat deployment from assets
     Launch {
         /// Path to the directory with the assets to upload
         #[clap(default_value = DEFAULT_ASSETS)]
@@ -59,7 +59,7 @@ pub enum Commands {
         #[clap(long)]
         strict: bool,
     },
-    /// Mint one NFT from candy machine
+    /// Mint one NFT from magic hat
     Mint {
         /// Path to the keypair file, uses Sol config or defaults to "~/.config/solana/id.json"
         #[clap(short, long)]
@@ -77,12 +77,12 @@ pub enum Commands {
         #[clap(short, long)]
         number: Option<u64>,
 
-        /// Address of candy machine to mint from.
+        /// Address of magic hat to mint from.
         #[clap(long)]
-        candy_machine: Option<String>,
+        magic_hat: Option<String>,
     },
 
-    /// Update the candy machine config on-chain
+    /// Update the magic hat config on-chain
     Update {
         /// Path to the config file, defaults to "config.json"
         #[clap(short, long, default_value = DEFAULT_CONFIG)]
@@ -104,12 +104,12 @@ pub enum Commands {
         #[clap(short, long)]
         new_authority: Option<String>,
 
-        /// Address of candy machine to update.
+        /// Address of magic hat to update.
         #[clap(long)]
-        candy_machine: Option<String>,
+        magic_hat: Option<String>,
     },
 
-    /// Deploy cache items into candy machine config on-chain
+    /// Deploy cache items into magic hat config on-chain
     Deploy {
         /// Path to the config file, defaults to "config.json"
         #[clap(short, long, default_value = DEFAULT_CONFIG)]
@@ -151,11 +151,11 @@ pub enum Commands {
         cache: String,
     },
 
-    /// Withdraw funds from candy machine account closing it
+    /// Withdraw funds from magic hat account closing it
     Withdraw {
-        /// Address of candy machine to withdraw funds from.
+        /// Address of magic hat to withdraw funds from.
         #[clap(long)]
-        candy_machine: Option<String>,
+        magic_hat: Option<String>,
 
         /// Path to the keypair file, uses Sol config or defaults to "~/.config/solana/id.json"
         #[clap(short, long)]
@@ -165,7 +165,7 @@ pub enum Commands {
         #[clap(short, long)]
         rpc_url: Option<String>,
 
-        /// List available candy machines, no withdraw performed
+        /// List available magic hats, no withdraw performed
         #[clap(long)]
         list: bool,
     },
@@ -196,7 +196,7 @@ pub enum Commands {
         cache: String,
     },
 
-    /// Show the on-chain config of an existing candy machine
+    /// Show the on-chain config of an existing magic hat
     Show {
         /// Path to the keypair file, uses Sol config or defaults to "~/.config/solana/id.json"
         #[clap(short, long)]
@@ -210,8 +210,8 @@ pub enum Commands {
         #[clap(long, default_value = DEFAULT_CACHE)]
         cache: String,
 
-        /// Address of candy machine
-        candy_machine: Option<String>,
+        /// Address of magic hat
+        magic_hat: Option<String>,
     },
 
     /// Interact with the bundlr network
@@ -228,7 +228,7 @@ pub enum Commands {
         action: BundlrAction,
     },
 
-    /// Manage the collection on the candy machine
+    /// Manage the collection on the magic hat
     Collection {
         #[clap(subcommand)]
         command: CollectionSubcommands,
@@ -237,9 +237,9 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum CollectionSubcommands {
-    /// Set the collection mint on the candy machine
+    /// Set the collection mint on the magic hat
     Set {
-        /// Address of collection mint to set the candy machine to.
+        /// Address of collection mint to set the magic hat to.
         #[clap(long)]
         collection_mint: String,
 
@@ -255,12 +255,12 @@ pub enum CollectionSubcommands {
         #[clap(long, default_value = DEFAULT_CACHE)]
         cache: String,
 
-        /// Address of candy machine to update.
+        /// Address of magic hat to update.
         #[clap(long)]
-        candy_machine: Option<String>,
+        magic_hat: Option<String>,
     },
 
-    /// Remove the collection from the candy machine
+    /// Remove the collection from the magic hat
     Remove {
         /// Path to the keypair file, uses Sol config or defaults to "~/.config/solana/id.json"
         #[clap(short, long)]
@@ -274,9 +274,9 @@ pub enum CollectionSubcommands {
         #[clap(long, default_value = DEFAULT_CACHE)]
         cache: String,
 
-        /// Address of candy machine to update.
+        /// Address of magic hat to update.
         #[clap(long)]
-        candy_machine: Option<String>,
+        magic_hat: Option<String>,
     },
 }
 

@@ -3,15 +3,15 @@ use std::str::FromStr;
 use anchor_client::solana_sdk::pubkey::Pubkey;
 use anyhow::Result;
 use console::style;
-use mpl_candy_machine::accounts as nft_accounts;
-use mpl_candy_machine::instruction as nft_instruction;
+use magic_hat::accounts as nft_accounts;
+use magic_hat::instruction as nft_instruction;
 use mpl_token_metadata::pda::find_collection_authority_account;
 use mpl_token_metadata::state::Metadata;
 
 use crate::cache::load_cache;
-use crate::candy_machine::CANDY_MACHINE_ID;
-use crate::candy_machine::*;
 use crate::common::*;
+use crate::magic_hat::MAGIC_HAT_ID;
+use crate::magic_hat::*;
 use crate::pdas::*;
 use crate::utils::spinner_with_style;
 
@@ -19,52 +19,52 @@ pub struct RemoveCollectionArgs {
     pub keypair: Option<String>,
     pub rpc_url: Option<String>,
     pub cache: String,
-    pub candy_machine: Option<String>,
+    pub magic_hat: Option<String>,
 }
 
 pub fn process_remove_collection(args: RemoveCollectionArgs) -> Result<()> {
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
-    let client = setup_client(&sugar_config)?;
-    let program = client.program(CANDY_MACHINE_ID);
-    // the candy machine id specified takes precedence over the one from the cache
-    let candy_machine_id = match args.candy_machine {
-        Some(candy_machine_id) => candy_machine_id,
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
+    let client = setup_client(&laddu_config)?;
+    let program = client.program(MAGIC_HAT_ID);
+    // the magic hat id specified takes precedence over the one from the cache
+    let magic_hat_id = match args.magic_hat {
+        Some(magic_hat_id) => magic_hat_id,
         None => {
             let cache = load_cache(&args.cache, false)?;
-            cache.program.candy_machine
+            cache.program.magic_hat
         }
     };
 
-    let candy_pubkey = match Pubkey::from_str(&candy_machine_id) {
-        Ok(candy_pubkey) => candy_pubkey,
+    let magichat_pubkey = match Pubkey::from_str(&magic_hat_id) {
+        Ok(magichat_pubkey) => magichat_pubkey,
         Err(_) => {
-            let error = anyhow!("Failed to parse candy machine id: {}", candy_machine_id);
+            let error = anyhow!("Failed to parse Magic Hat {}", magic_hat_id);
             error!("{:?}", error);
             return Err(error);
         }
     };
 
     println!(
-        "{} {}Loading candy machine",
+        "{} {}Loading Magic Hat",
         style("[1/2]").bold().dim(),
         LOOKING_GLASS_EMOJI
     );
-    println!("{} {}", style("Candy machine ID:").bold(), candy_machine_id);
+    println!("{} {}", style("Magic Hat ID:").bold(), magic_hat_id);
 
     let pb = spinner_with_style();
     pb.set_message("Connecting...");
 
-    let candy_machine_state = get_candy_machine_state(&sugar_config, &candy_pubkey)?;
-    let (collection_pda_pubkey, collection_pda) = get_collection_pda(&candy_pubkey, &program)?;
+    let magic_hat_state = get_magic_hat_state(&laddu_config, &magichat_pubkey)?;
+    let (collection_pda_pubkey, collection_pda) = get_collection_pda(&magichat_pubkey, &program)?;
     let collection_mint_pubkey = collection_pda.mint;
     let collection_metadata_info = get_metadata_pda(&collection_mint_pubkey, &program)?;
 
     pb.finish_with_message("Done");
 
     println!(
-        "{} {}Removing collection mint for candy machine",
+        "{} {}Removing collection mint for magic hat",
         style("[2/2]").bold().dim(),
-        CANDY_EMOJI
+        MAGICHAT_EMOJI
     );
 
     let pb = spinner_with_style();
@@ -72,8 +72,8 @@ pub fn process_remove_collection(args: RemoveCollectionArgs) -> Result<()> {
 
     let remove_signature = remove_collection(
         &program,
-        &candy_pubkey,
-        &candy_machine_state,
+        &magichat_pubkey,
+        &magic_hat_state,
         &collection_pda_pubkey,
         &collection_mint_pubkey,
         &collection_metadata_info,
@@ -90,8 +90,8 @@ pub fn process_remove_collection(args: RemoveCollectionArgs) -> Result<()> {
 
 pub fn remove_collection(
     program: &Program,
-    candy_pubkey: &Pubkey,
-    candy_machine_state: &CandyMachine,
+    magichat_pubkey: &Pubkey,
+    magic_hat_state: &MagicHat,
     collection_pda_pubkey: &Pubkey,
     collection_mint_pubkey: &Pubkey,
     collection_metadata_info: &PdaInfo<Metadata>,
@@ -104,22 +104,22 @@ pub fn remove_collection(
     let (collection_metadata_pubkey, collection_metadata) = collection_metadata_info;
 
     if collection_metadata.update_authority != payer {
-        return Err(anyhow!(CustomCandyError::AuthorityMismatch(
+        return Err(anyhow!(CustomMagicHatError::AuthorityMismatch(
             collection_metadata.update_authority.to_string(),
             payer.to_string()
         )));
     }
 
-    if candy_machine_state.items_redeemed > 0 {
+    if magic_hat_state.items_redeemed > 0 {
         return Err(anyhow!(
-            "You can't modify the Candy Machine collection after items have been minted."
+            "You can't modify the Magic Hat collection after items have been minted."
         ));
     }
 
     let builder = program
         .request()
         .accounts(nft_accounts::RemoveCollection {
-            candy_machine: *candy_pubkey,
+            magic_hat: *magichat_pubkey,
             authority: payer,
             collection_pda: *collection_pda_pubkey,
             metadata: *collection_metadata_pubkey,

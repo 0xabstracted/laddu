@@ -1,6 +1,5 @@
 pub mod bundlr;
 pub mod cache;
-pub mod candy_machine;
 pub mod cli;
 pub mod collections;
 pub mod common;
@@ -10,6 +9,7 @@ pub mod create_config;
 pub mod deploy;
 pub mod errors;
 pub mod launch;
+pub mod magic_hat;
 pub mod mint;
 pub mod parse;
 pub mod pdas;

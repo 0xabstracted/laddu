@@ -3,7 +3,7 @@ use bundlr_sdk::{deep_hash::deep_hash, deep_hash::DeepHashChunk};
 use console::style;
 use data_encoding::BASE64URL;
 
-use crate::candy_machine::CANDY_MACHINE_ID;
+use crate::magic_hat::MAGIC_HAT_ID;
 use crate::{cli::BundlrAction, common::*, config::*, upload::BundlrHandler, utils::*};
 
 // The minimum amount required for withdraw.
@@ -16,8 +16,8 @@ pub struct BundlrArgs {
 }
 
 pub async fn process_bundlr(args: BundlrArgs) -> Result<()> {
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
-    let client = setup_client(&sugar_config)?;
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
+    let client = setup_client(&laddu_config)?;
 
     // retrieving balance
 
@@ -36,11 +36,11 @@ pub async fn process_bundlr(args: BundlrArgs) -> Result<()> {
     let pb = spinner_with_style();
     pb.set_message("Connecting...");
 
-    let program = client.program(CANDY_MACHINE_ID);
+    let program = client.program(MAGIC_HAT_ID);
     let solana_cluster: Cluster = get_cluster(program.rpc())?;
 
     let http_client = reqwest::Client::new();
-    let keypair = sugar_config.keypair;
+    let keypair = laddu_config.keypair;
     let address = keypair.pubkey().to_string();
     let bundlr_node = match solana_cluster {
         Cluster::Devnet => BUNDLR_DEVNET,

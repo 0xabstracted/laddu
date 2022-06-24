@@ -18,7 +18,7 @@ use std::{
 };
 use tokio::time::{sleep, Duration};
 
-use crate::candy_machine::CANDY_MACHINE_ID;
+use crate::magic_hat::MAGIC_HAT_ID;
 use crate::{common::*, config::*, constants::PARALLEL_LIMIT, upload::*, utils::*};
 
 /// The number os retries to fetch the Bundlr balance (MAX_RETRY * DELAY_UNTIL_RETRY ms limit)
@@ -55,10 +55,10 @@ impl BundlrHandler {
     /// Initialize a new BundlrHandler.
     pub async fn initialize(
         config_data: &ConfigData,
-        sugar_config: &SugarConfig,
+        laddu_config: &LadduConfig,
     ) -> Result<BundlrHandler> {
-        let client = setup_client(sugar_config)?;
-        let program = client.program(CANDY_MACHINE_ID);
+        let client = setup_client(laddu_config)?;
+        let program = client.program(MAGIC_HAT_ID);
         let solana_cluster: Cluster = get_cluster(program.rpc())?;
 
         let bundlr_node = match config_data.upload_method {
@@ -80,7 +80,7 @@ impl BundlrHandler {
 
         let bundlr_pubkey = Pubkey::from_str(&bundlr_address)?;
         // get keypair as base58 string for Bundlr
-        let keypair = bs58::encode(sugar_config.keypair.to_bytes()).into_string();
+        let keypair = bs58::encode(laddu_config.keypair.to_bytes()).into_string();
         let signer = SolanaSigner::from_base58(&keypair);
 
         let bundlr_client = Bundlr::new(
@@ -230,7 +230,7 @@ impl UploadHandler for BundlrHandler {
     /// Funds Bundlr account for the upload.
     async fn prepare(
         &self,
-        sugar_config: &SugarConfig,
+        laddu_config: &LadduConfig,
         assets: &HashMap<usize, AssetPair>,
         image_indices: &[usize],
         metadata_indices: &[usize],
@@ -281,7 +281,7 @@ impl UploadHandler for BundlrHandler {
             .await?
             * (1.1 as u64);
 
-        let address = sugar_config.keypair.pubkey().to_string();
+        let address = laddu_config.keypair.pubkey().to_string();
         let mut balance =
             BundlrHandler::get_bundlr_balance(&http_client, &address, &self.node).await?;
 
@@ -293,8 +293,8 @@ impl UploadHandler for BundlrHandler {
         // funds the bundlr wallet for image upload
         let rpc: RpcClient;
         {
-            let client = setup_client(sugar_config)?;
-            let program = client.program(CANDY_MACHINE_ID);
+            let client = setup_client(laddu_config)?;
+            let program = client.program(MAGIC_HAT_ID);
             rpc = program.rpc();
         }
 
@@ -304,7 +304,7 @@ impl UploadHandler for BundlrHandler {
                 &http_client,
                 &self.pubkey,
                 &self.node,
-                &sugar_config.keypair,
+                &laddu_config.keypair,
                 lamports_fee - balance,
             )
             .await?;
@@ -347,7 +347,7 @@ impl UploadHandler for BundlrHandler {
     /// Upload the data to Bundlr.
     async fn upload_data(
         &self,
-        _sugar_config: &SugarConfig,
+        _laddu_config: &LadduConfig,
         assets: &HashMap<usize, AssetPair>,
         cache: &mut Cache,
         indices: &[usize],
@@ -386,7 +386,7 @@ impl UploadHandler for BundlrHandler {
             return Err(anyhow!("Invalid file extension: {:?}", extension));
         };
 
-        let sugar_tag = Tag::new("App-Name".into(), format!("Sugar {}", crate_version!()));
+        let laddu_tag = Tag::new("App-Name".into(), format!("Laddu {}", crate_version!()));
 
         let image_tag = match data_type {
             DataType::Image => Tag::new("Content-Type".into(), format!("image/{extension}")),
@@ -429,7 +429,7 @@ impl UploadHandler for BundlrHandler {
                 file_path: String::from(path.to_str().expect("Failed to parse path from unicode.")),
                 image_link: cache_item.image_link.clone(),
                 data_type: data_type.clone(),
-                tag: vec![sugar_tag.clone(), image_tag.clone()],
+                tag: vec![laddu_tag.clone(), image_tag.clone()],
                 animation_link: cache_item.animation_link.clone(),
             });
         }

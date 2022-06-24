@@ -3,17 +3,17 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum SetupError {
-    #[error("Error setting up sugar: {0}")]
-    SugarSetupError(String),
+    #[error("Error setting up laddu: {0}")]
+    LadduSetupError(String),
 }
 
 #[derive(Debug, Error)]
 pub enum CacheError {
-    #[error("Cache file '{0}' not found. Run `sugar upload` to create it or provide it with the --cache option.")]
+    #[error("Cache file '{0}' not found. Run `laddu upload` to create it or provide it with the --cache option.")]
     CacheFileNotFound(String),
 
-    #[error("Invalid candy machine address: '{0}'. Check your cache file or run deploy to ensure your candy machine was created.")]
-    InvalidCandyMachineAddress(String),
+    #[error("Invalid magichat address: '{0}'. Check your cache file or run deploy to ensure your magichat was created.")]
+    InvalidMagicHatAddress(String),
 
     #[error("Failed to open cache file: {0} with error: {1}")]
     FailedToOpenCacheFile(String, String),
@@ -38,8 +38,8 @@ pub enum ReadFilesError {
 }
 
 #[derive(Debug, Error)]
-pub enum CustomCandyError {
-    #[error("Payer key '{0}' does not equal the Candy Machine authority pubkey '{1}'")]
+pub enum CustomMagicHatError {
+    #[error("Payer key '{0}' does not equal the Magic Hat authority pubkey '{1}'")]
     AuthorityMismatch(String, String),
 }
 

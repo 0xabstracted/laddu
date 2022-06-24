@@ -9,26 +9,26 @@ use anyhow::{anyhow, Result};
 use std::rc::Rc;
 use tracing::error;
 
-use crate::config::data::SugarConfig;
+use crate::config::data::LadduConfig;
 use crate::constants::{DEFAULT_KEYPATH, DEFAULT_RPC_DEVNET};
 use crate::parse::*;
 
-pub fn setup_client(sugar_config: &SugarConfig) -> Result<Client> {
-    let rpc_url = sugar_config.rpc_url.clone();
+pub fn setup_client(laddu_config: &LadduConfig) -> Result<Client> {
+    let rpc_url = laddu_config.rpc_url.clone();
     let ws_url = rpc_url.replace("http", "ws");
     let cluster = Cluster::Custom(rpc_url, ws_url);
 
-    let key_bytes = sugar_config.keypair.to_bytes();
+    let key_bytes = laddu_config.keypair.to_bytes();
     let signer = Rc::new(Keypair::from_bytes(&key_bytes)?);
 
     let opts = CommitmentConfig::confirmed();
     Ok(Client::new_with_options(cluster, signer, opts))
 }
 
-pub fn sugar_setup(
+pub fn laddu_setup(
     keypair_opt: Option<String>,
     rpc_url_opt: Option<String>,
-) -> Result<SugarConfig> {
+) -> Result<LadduConfig> {
     let sol_config_option = parse_solana_config();
 
     let rpc_url = match rpc_url_opt {
@@ -77,5 +77,5 @@ pub fn sugar_setup(
         },
     };
 
-    Ok(SugarConfig { rpc_url, keypair })
+    Ok(LadduConfig { rpc_url, keypair })
 }

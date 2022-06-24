@@ -138,7 +138,7 @@ impl UploadHandler for NftStorageHandler {
     /// Nothing to do, Nft Storage ready for the upload.
     async fn prepare(
         &self,
-        _sugar_config: &SugarConfig,
+        _laddu_config: &LadduConfig,
         _assets: &HashMap<usize, AssetPair>,
         _image_indices: &[usize],
         _metadata_indices: &[usize],
@@ -150,7 +150,7 @@ impl UploadHandler for NftStorageHandler {
     /// Upload the data to Nft Storage
     async fn upload_data(
         &self,
-        _sugar_config: &SugarConfig,
+        _laddu_config: &LadduConfig,
         assets: &HashMap<usize, AssetPair>,
         cache: &mut Cache,
         indices: &[usize],

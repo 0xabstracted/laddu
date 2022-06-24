@@ -1,19 +1,19 @@
 use anchor_client::solana_sdk::pubkey::Pubkey;
 use anchor_client::{Client, ClientError};
 use anyhow::{anyhow, Result};
-pub use mpl_candy_machine::ID as CANDY_MACHINE_ID;
-use mpl_candy_machine::{CandyMachine, CandyMachineData, WhitelistMintMode, WhitelistMintSettings};
+pub use magic_hat::ID as MAGIC_HAT_ID;
+use magic_hat::{MagicHat, MagicHatData, WhitelistMintMode, WhitelistMintSettings};
 use spl_token::id as token_program_id;
 
-use crate::config::data::SugarConfig;
+use crate::config::data::LadduConfig;
 use crate::config::{price_as_lamports, ConfigData};
 use crate::setup::setup_client;
 use crate::utils::check_spl_token;
 
-// To test a custom candy machine program, comment the line above and use the
+// To test a custom magichat program, comment the line above and use the
 // following lines to declare the id to use:
 //use solana_program::declare_id;
-//declare_id!("<CANDY MACHINE ID>");
+//declare_id!("<Magic Hat ID>");
 
 #[derive(Debug)]
 pub struct ConfigStatus {
@@ -37,39 +37,36 @@ pub fn parse_config_price(client: &Client, config: &ConfigData) -> Result<u64> {
     Ok(parsed_price)
 }
 
-pub fn get_candy_machine_state(
-    sugar_config: &SugarConfig,
-    candy_machine_id: &Pubkey,
-) -> Result<CandyMachine> {
-    let client = setup_client(sugar_config)?;
-    let program = client.program(CANDY_MACHINE_ID);
+pub fn get_magic_hat_state(laddu_config: &LadduConfig, magic_hat_id: &Pubkey) -> Result<MagicHat> {
+    let client = setup_client(laddu_config)?;
+    let program = client.program(MAGIC_HAT_ID);
 
-    program.account(*candy_machine_id).map_err(|e| match e {
-        ClientError::AccountNotFound => anyhow!("Candy Machine does not exist!"),
+    program.account(*magic_hat_id).map_err(|e| match e {
+        ClientError::AccountNotFound => anyhow!("Magic Hat does not exist!"),
         _ => anyhow!(
-            "Failed to deserialize Candy Machine account: {}",
-            candy_machine_id.to_string()
+            "Failed to deserialize Magic Hat account: {}",
+            magic_hat_id.to_string()
         ),
     })
 }
 
-pub fn get_candy_machine_data(
-    sugar_config: &SugarConfig,
-    candy_machine_id: &Pubkey,
-) -> Result<CandyMachineData> {
-    let candy_machine = get_candy_machine_state(sugar_config, candy_machine_id)?;
-    Ok(candy_machine.data)
+pub fn get_magic_hat_data(
+    laddu_config: &LadduConfig,
+    magic_hat_id: &Pubkey,
+) -> Result<MagicHatData> {
+    let magic_hat = get_magic_hat_state(laddu_config, magic_hat_id)?;
+    Ok(magic_hat.data)
 }
 
-pub fn print_candy_machine_state(state: CandyMachine) {
+pub fn print_magic_hat_state(state: MagicHat) {
     println!("Authority {:?}", state.authority);
     println!("Wallet {:?}", state.wallet);
     println!("Token mint: {:?}", state.token_mint);
     println!("Items redeemed: {:?}", state.items_redeemed);
-    print_candy_machine_data(&state.data);
+    print_magic_hat_data(&state.data);
 }
 
-pub fn print_candy_machine_data(data: &CandyMachineData) {
+pub fn print_magic_hat_data(data: &MagicHatData) {
     println!("Uuid: {:?}", data.uuid);
     println!("Price: {:?}", data.price);
     println!("Symbol: {:?}", data.symbol);

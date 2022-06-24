@@ -2,13 +2,13 @@ use anchor_lang::AccountDeserialize;
 use console::style;
 use std::{thread, time::Duration};
 
-use mpl_candy_machine::CandyMachine;
+use magic_hat::MagicHat;
 
 use crate::cache::*;
-use crate::candy_machine::CANDY_MACHINE_ID;
 use crate::common::*;
 use crate::config::Cluster;
-use crate::constants::{CANDY_EMOJI, PAPER_EMOJI};
+use crate::constants::{MAGICHAT_EMOJI, PAPER_EMOJI};
+use crate::magic_hat::MAGIC_HAT_ID;
 use crate::utils::*;
 use crate::verify::VerifyError;
 
@@ -25,7 +25,7 @@ pub struct OnChainItem {
 }
 
 pub fn process_verify(args: VerifyArgs) -> Result<()> {
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
 
     // loads the cache file (this needs to have been created by
     // the upload command)
@@ -44,35 +44,32 @@ pub fn process_verify(args: VerifyArgs) -> Result<()> {
     }
 
     println!(
-        "{} {}Loading candy machine",
+        "{} {}Loading Magic Hat",
         style("[1/2]").bold().dim(),
-        CANDY_EMOJI
+        MAGICHAT_EMOJI
     );
 
     let pb = spinner_with_style();
     pb.set_message("Connecting...");
 
-    let candy_machine_pubkey = match Pubkey::from_str(&cache.program.candy_machine) {
+    let magic_hat_pubkey = match Pubkey::from_str(&cache.program.magic_hat) {
         Ok(pubkey) => pubkey,
         Err(_) => {
             pb.finish_and_clear();
-            return Err(CacheError::InvalidCandyMachineAddress(
-                cache.program.candy_machine.clone(),
-            )
-            .into());
+            return Err(CacheError::InvalidMagicHatAddress(cache.program.magic_hat.clone()).into());
         }
     };
 
-    let client = setup_client(&sugar_config)?;
-    let program = client.program(CANDY_MACHINE_ID);
+    let client = setup_client(&laddu_config)?;
+    let program = client.program(MAGIC_HAT_ID);
 
-    let data = match program.rpc().get_account_data(&candy_machine_pubkey) {
+    let data = match program.rpc().get_account_data(&magic_hat_pubkey) {
         Ok(account_data) => account_data,
         Err(err) => {
             return Err(VerifyError::FailedToGetAccountData(err.to_string()).into());
         }
     };
-    let candy_machine: CandyMachine = CandyMachine::try_deserialize(&mut data.as_slice())?;
+    let magic_hat: MagicHat = MagicHat::try_deserialize(&mut data.as_slice())?;
 
     pb.finish_with_message("Completed");
 
@@ -82,7 +79,7 @@ pub fn process_verify(args: VerifyArgs) -> Result<()> {
         PAPER_EMOJI
     );
 
-    if candy_machine.data.hidden_settings.is_none() {
+    if magic_hat.data.hidden_settings.is_none() {
         let num_items = cache.items.0.len();
         let cache_items = &mut cache.items.0;
         let mut errors = Vec::new();
@@ -153,12 +150,12 @@ pub fn process_verify(args: VerifyArgs) -> Result<()> {
         };
 
         println!(
-            "\nAll items checked out. You're good to go!\nSee your candy machine at: https://www.solaneyes.com/address/{}?cluster={}",
-            cache.program.candy_machine,
+            "\nAll items checked out. You're good to go!\nSee your magic hat at: https://www.solaneyes.com/address/{}?cluster={}",
+            cache.program.magic_hat,
             cluster
         );
     } else {
-        // nothing else todo, there are no config lines in a candy machine
+        // nothing else todo, there are no config lines in a magic hat
         // with hidden settings
         println!("\nHidden settings enabled. You're good to go!");
     }

@@ -1,8 +1,8 @@
 use crate::common::*;
-use crate::pdas::find_candy_machine_creator_pda;
+use crate::pdas::find_magic_hat_creator_pda;
 use anchor_client::solana_sdk::pubkey::Pubkey;
 use anyhow::Result;
-use mpl_candy_machine::ConfigLine;
+use magic_hat::ConfigLine;
 use serde::{Deserialize, Serialize};
 use std::{fs, io::Write, path::Path};
 
@@ -45,26 +45,25 @@ impl Default for Cache {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CacheProgram {
-    #[serde(rename = "candyMachine")]
-    pub candy_machine: String,
-    #[serde(rename = "candyMachineCreator")]
-    pub candy_machine_creator: String,
+    #[serde(rename = "magicHat")]
+    pub magic_hat: String,
+    #[serde(rename = "magicHatCreator")]
+    pub magic_hat_creator: String,
 }
 
 impl CacheProgram {
     pub fn new() -> Self {
         CacheProgram {
-            candy_machine: String::new(),
-            candy_machine_creator: String::new(),
+            magic_hat: String::new(),
+            magic_hat_creator: String::new(),
         }
     }
 
-    pub fn new_from_cm(candy_machine: &Pubkey) -> Self {
-        let (candy_machine_creator_pda, _creator_bump) =
-            find_candy_machine_creator_pda(candy_machine);
+    pub fn new_from_cm(magic_hat: &Pubkey) -> Self {
+        let (magic_hat_creator_pda, _creator_bump) = find_magic_hat_creator_pda(magic_hat);
         CacheProgram {
-            candy_machine: candy_machine.to_string(),
-            candy_machine_creator: candy_machine_creator_pda.to_string(),
+            magic_hat: magic_hat.to_string(),
+            magic_hat_creator: magic_hat_creator_pda.to_string(),
         }
     }
 }

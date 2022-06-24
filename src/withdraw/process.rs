@@ -21,16 +21,16 @@ use std::{
     str::FromStr,
 };
 
-use mpl_candy_machine::accounts as nft_accounts;
-use mpl_candy_machine::instruction as nft_instruction;
+use magic_hat::accounts as nft_accounts;
+use magic_hat::instruction as nft_instruction;
 
-use crate::candy_machine::CANDY_MACHINE_ID;
 use crate::common::*;
-use crate::setup::{setup_client, sugar_setup};
+use crate::magic_hat::MAGIC_HAT_ID;
+use crate::setup::{laddu_setup, setup_client};
 use crate::utils::*;
 
 pub struct WithdrawArgs {
-    pub candy_machine: Option<String>,
+    pub magic_hat: Option<String>,
     pub keypair: Option<String>,
     pub rpc_url: Option<String>,
     pub list: bool,
@@ -59,20 +59,20 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
         if args.list { "Listing" } else { "Retrieving" }
     );
 
-    // the --list flag takes precedence; even if a candy machine id is passed
-    // as an argument, we will list the candy machines (no draining happens)
-    let candy_machine = if args.list { None } else { args.candy_machine };
+    // the --list flag takes precedence; even if a magic hat id is passed
+    // as an argument, we will list the magic hats (no draining happens)
+    let magic_hat = if args.list { None } else { args.magic_hat };
 
     // (2) Retrieving data for listing/draining
 
-    match &candy_machine {
-        Some(candy_machine) => {
-            let candy_machine = Pubkey::from_str(candy_machine)?;
+    match &magic_hat {
+        Some(magic_hat) => {
+            let magic_hat = Pubkey::from_str(magic_hat)?;
 
             let pb = spinner_with_style();
-            pb.set_message("Draining candy machine...");
+            pb.set_message("Draining Magic Hat...");
 
-            do_withdraw(Rc::new(program), candy_machine, payer)?;
+            do_withdraw(Rc::new(program), magic_hat, payer)?;
 
             pb.finish_with_message("Done");
         }
@@ -94,7 +94,7 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
             };
 
             let pb = spinner_with_style();
-            pb.set_message("Looking up candy machines...");
+            pb.set_message("Looking up Magic Hats...");
 
             let program = Rc::new(program);
             let accounts = program
@@ -111,7 +111,7 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
             });
 
             println!(
-                "Found {} candy machines, total amount: ◎ {}",
+                "Found {} Magic Hats, total amount: ◎ {}",
                 accounts.len(),
                 total / LAMPORTS_PER_SOL as f64
             );
@@ -120,7 +120,7 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
                 // nothing else to do, we just say goodbye
                 println!("\n{}", style("[Completed]").bold().dim());
             } else if args.list {
-                println!("\n{:48} Balance", "Candy Machine ID");
+                println!("\n{:48} Balance", "Magic Hat ID");
                 println!("{:-<61}", "-");
 
                 for (pubkey, account) in accounts {
@@ -134,7 +134,7 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
                 println!("\n{}", style("[Completed]").bold().dim());
             } else {
                 println!("\n+----------------------------------------------+");
-                println!("| WARNING: This will drain all candy machines. |");
+                println!("| WARNING: This will drain all Magic Hats. |");
                 println!("+----------------------------------------------+");
 
                 print!("\nContinue? [Y/n] (default \'n\'): ");
@@ -148,8 +148,8 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
                     let mut not_drained = 0;
 
                     accounts.iter().for_each(|account| {
-                        let (candy_machine, _account) = account;
-                        do_withdraw(program.clone(), *candy_machine, payer).unwrap_or_else(|e| {
+                        let (magic_hat, _account) = account;
+                        do_withdraw(program.clone(), *magic_hat, payer).unwrap_or_else(|e| {
                             not_drained += 1;
                             error!("Error: {}", e);
                         });
@@ -161,14 +161,14 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
                     if not_drained > 0 {
                         println!(
                             "{}",
-                            style(format!("Could not drain {} candy machine(s)", not_drained))
+                            style(format!("Could not drain {} Magic Hat(s)", not_drained))
                                 .red()
                                 .bold()
                                 .dim()
                         );
                     }
                 } else {
-                    // there were candy machines to drain, but the user decided
+                    // there were magic hats to drain, but the user decided
                     // to abort the withdraw
                     println!("\n{}", style("Withdraw aborted.").red().bold().dim());
                 }
@@ -180,19 +180,19 @@ pub fn process_withdraw(args: WithdrawArgs) -> Result<()> {
 }
 
 fn setup_withdraw(keypair: Option<String>, rpc_url: Option<String>) -> Result<(Program, Pubkey)> {
-    let sugar_config = sugar_setup(keypair, rpc_url)?;
-    let client = setup_client(&sugar_config)?;
-    let program = client.program(CANDY_MACHINE_ID);
+    let laddu_config = laddu_setup(keypair, rpc_url)?;
+    let client = setup_client(&laddu_config)?;
+    let program = client.program(MAGIC_HAT_ID);
     let payer = program.payer();
 
     Ok((program, payer))
 }
 
-fn do_withdraw(program: Rc<Program>, candy_machine: Pubkey, payer: Pubkey) -> Result<()> {
+fn do_withdraw(program: Rc<Program>, magic_hat: Pubkey, payer: Pubkey) -> Result<()> {
     program
         .request()
         .accounts(nft_accounts::WithdrawFunds {
-            candy_machine,
+            magic_hat,
             authority: payer,
         })
         .args(nft_instruction::WithdrawFunds {})

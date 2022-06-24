@@ -15,27 +15,27 @@ use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{self, filter::LevelFilter, prelude::*, EnvFilter};
 
-use sugar_cli::bundlr::{process_bundlr, BundlrArgs};
-use sugar_cli::cli::{Cli, CollectionSubcommands, Commands};
-use sugar_cli::collections::{
+use laddu_cli::bundlr::{process_bundlr, BundlrArgs};
+use laddu_cli::cli::{Cli, CollectionSubcommands, Commands};
+use laddu_cli::collections::{
     process_remove_collection, process_set_collection, RemoveCollectionArgs, SetCollectionArgs,
 };
-use sugar_cli::constants::{COMPLETE_EMOJI, ERROR_EMOJI};
-use sugar_cli::create_config::{process_create_config, CreateConfigArgs};
-use sugar_cli::deploy::{process_deploy, DeployArgs};
-use sugar_cli::launch::{process_launch, LaunchArgs};
-use sugar_cli::mint::{process_mint, MintArgs};
-use sugar_cli::show::{process_show, ShowArgs};
-use sugar_cli::update::{process_update, UpdateArgs};
-use sugar_cli::upload::{process_upload, UploadArgs};
-use sugar_cli::validate::{process_validate, ValidateArgs};
-use sugar_cli::verify::{process_verify, VerifyArgs};
-use sugar_cli::withdraw::{process_withdraw, WithdrawArgs};
+use laddu_cli::constants::{COMPLETE_EMOJI, ERROR_EMOJI};
+use laddu_cli::create_config::{process_create_config, CreateConfigArgs};
+use laddu_cli::deploy::{process_deploy, DeployArgs};
+use laddu_cli::launch::{process_launch, LaunchArgs};
+use laddu_cli::mint::{process_mint, MintArgs};
+use laddu_cli::show::{process_show, ShowArgs};
+use laddu_cli::update::{process_update, UpdateArgs};
+use laddu_cli::upload::{process_upload, UploadArgs};
+use laddu_cli::validate::{process_validate, ValidateArgs};
+use laddu_cli::verify::{process_verify, VerifyArgs};
+use laddu_cli::withdraw::{process_withdraw, WithdrawArgs};
 
 fn setup_logging(level: Option<EnvFilter>) -> Result<()> {
     // Log path; change this to be dynamic for multiple OSes.
     // Log in current directory for now.
-    let log_path = PathBuf::from("sugar.log");
+    let log_path = PathBuf::from("laddu.log");
 
     let file = OpenOptions::new()
         .write(true)
@@ -50,7 +50,7 @@ fn setup_logging(level: Option<EnvFilter>) -> Result<()> {
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace"))
     };
 
-    let formatting_layer = BunyanFormattingLayer::new("sugar".into(), file);
+    let formatting_layer = BunyanFormattingLayer::new("laddu".into(), file);
     let level_filter = LevelFilter::from_str(&env_filter.to_string())?;
 
     let subscriber = tracing_subscriber::registry()
@@ -103,7 +103,7 @@ async fn run() -> Result<()> {
         setup_logging(None)?;
     }
 
-    tracing::info!("Lend me some sugar, I am your neighbor.");
+    tracing::info!("Lend me some laddu, I am your neighbor.");
 
     let interrupted = Arc::new(AtomicBool::new(true));
     let ctrl_handler = interrupted.clone();
@@ -160,13 +160,13 @@ async fn run() -> Result<()> {
             rpc_url,
             cache,
             number,
-            candy_machine,
+            magic_hat,
         } => process_mint(MintArgs {
             keypair,
             rpc_url,
             cache,
             number,
-            candy_machine,
+            magic_hat,
         })?,
         Commands::Update {
             config,
@@ -174,14 +174,14 @@ async fn run() -> Result<()> {
             rpc_url,
             cache,
             new_authority,
-            candy_machine,
+            magic_hat,
         } => process_update(UpdateArgs {
             config,
             keypair,
             rpc_url,
             cache,
             new_authority,
-            candy_machine,
+            magic_hat,
         })?,
         Commands::Deploy {
             config,
@@ -219,12 +219,12 @@ async fn run() -> Result<()> {
             process_validate(ValidateArgs { assets_dir, strict })?
         }
         Commands::Withdraw {
-            candy_machine,
+            magic_hat,
             keypair,
             rpc_url,
             list,
         } => process_withdraw(WithdrawArgs {
-            candy_machine,
+            magic_hat,
             keypair,
             rpc_url,
             list,
@@ -242,12 +242,12 @@ async fn run() -> Result<()> {
             keypair,
             rpc_url,
             cache,
-            candy_machine,
+            magic_hat,
         } => process_show(ShowArgs {
             keypair,
             rpc_url,
             cache,
-            candy_machine,
+            magic_hat,
         })?,
         Commands::Collection { command } => match command {
             CollectionSubcommands::Set {
@@ -255,24 +255,24 @@ async fn run() -> Result<()> {
                 keypair,
                 rpc_url,
                 cache,
-                candy_machine,
+                magic_hat,
             } => process_set_collection(SetCollectionArgs {
                 collection_mint,
                 keypair,
                 rpc_url,
                 cache,
-                candy_machine,
+                magic_hat,
             })?,
             CollectionSubcommands::Remove {
                 keypair,
                 rpc_url,
                 cache,
-                candy_machine,
+                magic_hat,
             } => process_remove_collection(RemoveCollectionArgs {
                 keypair,
                 rpc_url,
                 cache,
-                candy_machine,
+                magic_hat,
             })?,
         },
         Commands::Bundlr {

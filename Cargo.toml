@@ -1,14 +1,11 @@
 [package]
-name = "sugar-cli"
+name = "laddu-cli"
 version = "0.3.2"
 edition = "2021"
-description = "Command line tool for creating and managing Metaplex Candy Machines."
-license = "Apache-2.0"
-repository = "https://github.com/metaplex-foundation/sugar"
-documentation = "https://docs.metaplex.com/sugar/introduction"
+description = "Command line tool for creating and managing Metaplex Magic Hats."
 
 [[bin]]
-name = "sugar"
+name = "laddu"
 path = "src/main.rs"
 
 [dependencies]
@@ -31,7 +28,7 @@ glob = "0.3.0"
 indexmap = { version = "1.8.0", features = ["serde"] }
 indicatif = { version = "0.16.2", features = ["rayon"] }
 mpl-token-metadata = "1.2.7"
-mpl-candy-machine = { version = "4.0.0", features = ["no-entrypoint"] }
+magic-hat = {git = "https://github.com/0xabstracted/magic-hat.git", version = "1.0.0", features = ["no-entrypoint"]}
 num_cpus = "1.13.1"
 par-stream = { version = "0.10.0", features = ["runtime-tokio"] }
 rand = "0.7.0"
@@ -50,7 +47,7 @@ spl-associated-token-account = "1.0.3"
 spl-token = "3.2.0"
 structopt = "0.3.25"
 thiserror = "1.0.30"
-tokio = "1.15.0"
+tokio = "1.19.2"
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 tracing-bunyan-formatter = "0.3"

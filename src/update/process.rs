@@ -5,13 +5,13 @@ use console::style;
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 
-use mpl_candy_machine::instruction as nft_instruction;
-use mpl_candy_machine::{accounts as nft_accounts, CandyMachineData};
+use magic_hat::instruction as nft_instruction;
+use magic_hat::{accounts as nft_accounts, MagicHatData};
 
-use crate::candy_machine::CANDY_MACHINE_ID;
-use crate::candy_machine::{get_candy_machine_state, parse_config_price};
 use crate::common::*;
 use crate::config::{data::*, parser::get_config_data};
+use crate::magic_hat::MAGIC_HAT_ID;
+use crate::magic_hat::{get_magic_hat_state, parse_config_price};
 use crate::utils::{check_spl_token, check_spl_token_account, spinner_with_style};
 use crate::{cache::load_cache, config::data::ConfigData};
 
@@ -21,46 +21,45 @@ pub struct UpdateArgs {
     pub cache: String,
     pub new_authority: Option<String>,
     pub config: String,
-    pub candy_machine: Option<String>,
+    pub magic_hat: Option<String>,
 }
 
 pub fn process_update(args: UpdateArgs) -> Result<()> {
-    let sugar_config = sugar_setup(args.keypair, args.rpc_url)?;
-    let client = setup_client(&sugar_config)?;
+    let laddu_config = laddu_setup(args.keypair, args.rpc_url)?;
+    let client = setup_client(&laddu_config)?;
     let config_data = get_config_data(&args.config)?;
 
-    // the candy machine id specified takes precedence over the one from the cache
+    // the magic hat id specified takes precedence over the one from the cache
 
-    let candy_machine_id = match args.candy_machine {
-        Some(candy_machine_id) => candy_machine_id,
+    let magic_hat_id = match args.magic_hat {
+        Some(magic_hat_id) => magic_hat_id,
         None => {
             let cache = load_cache(&args.cache, false)?;
-            cache.program.candy_machine
+            cache.program.magic_hat
         }
     };
 
-    let candy_pubkey = match Pubkey::from_str(&candy_machine_id) {
-        Ok(candy_pubkey) => candy_pubkey,
+    let magichat_pubkey = match Pubkey::from_str(&magic_hat_id) {
+        Ok(magichat_pubkey) => magichat_pubkey,
         Err(_) => {
-            let error = anyhow!("Failed to parse candy machine id: {}", candy_machine_id);
+            let error = anyhow!("Failed to parse Magic Hat id: {}", magic_hat_id);
             error!("{:?}", error);
             return Err(error);
         }
     };
 
     println!(
-        "{} {}Loading candy machine",
+        "{} {}Loading Magic Hat",
         style("[1/2]").bold().dim(),
         LOOKING_GLASS_EMOJI
     );
-    println!("{} {}", style("Candy machine ID:").bold(), candy_machine_id);
+    println!("{} {}", style("Magic Hat ID:").bold(), magic_hat_id);
 
     let pb = spinner_with_style();
     pb.set_message("Connecting...");
 
-    let candy_machine_state = get_candy_machine_state(&sugar_config, &candy_pubkey)?;
-    let candy_machine_data =
-        create_candy_machine_data(&client, &config_data, candy_machine_state.data)?;
+    let magic_hat_state = get_magic_hat_state(&laddu_config, &magichat_pubkey)?;
+    let magic_hat_data = create_magic_hat_data(&client, &config_data, magic_hat_state.data)?;
 
     pb.finish_with_message("Done");
 
@@ -82,7 +81,7 @@ pub fn process_update(args: UpdateArgs) -> Result<()> {
         }
     }
 
-    let program = client.program(CANDY_MACHINE_ID);
+    let program = client.program(MAGIC_HAT_ID);
 
     let treasury_account = match config_data.spl_token {
         Some(spl_token) => {
@@ -111,19 +110,19 @@ pub fn process_update(args: UpdateArgs) -> Result<()> {
         }
         None => match config_data.sol_treasury_account {
             Some(sol_treasury_account) => sol_treasury_account,
-            None => sugar_config.keypair.pubkey(),
+            None => laddu_config.keypair.pubkey(),
         },
     };
 
     let mut builder = program
         .request()
-        .accounts(nft_accounts::UpdateCandyMachine {
-            candy_machine: candy_pubkey,
+        .accounts(nft_accounts::UpdateMagicHat {
+            magic_hat: magichat_pubkey,
             authority: program.payer(),
             wallet: treasury_account,
         })
-        .args(nft_instruction::UpdateCandyMachine {
-            data: candy_machine_data,
+        .args(nft_instruction::UpdateMagicHat {
+            data: magic_hat_data,
         });
 
     if !remaining_accounts.is_empty() {
@@ -150,8 +149,8 @@ pub fn process_update(args: UpdateArgs) -> Result<()> {
         let new_authority_pubkey = Pubkey::from_str(&new_authority)?;
         let builder = program
             .request()
-            .accounts(nft_accounts::UpdateCandyMachine {
-                candy_machine: candy_pubkey,
+            .accounts(nft_accounts::UpdateMagicHat {
+                magic_hat: magichat_pubkey,
                 authority: program.payer(),
                 wallet: treasury_account,
             })
@@ -170,27 +169,30 @@ pub fn process_update(args: UpdateArgs) -> Result<()> {
     Ok(())
 }
 
-fn create_candy_machine_data(
+fn create_magic_hat_data(
     client: &Client,
     config: &ConfigData,
-    candy_machine: CandyMachineData,
-) -> Result<CandyMachineData> {
+    magic_hat: MagicHatData,
+) -> Result<MagicHatData> {
     info!("{:?}", config.go_live_date);
     let go_live_date = Some(go_live_date_as_timestamp(&config.go_live_date)?);
 
-    let end_settings = config.end_settings.as_ref().map(|s| s.into_candy_format());
+    let end_settings = config
+        .end_settings
+        .as_ref()
+        .map(|s| s.into_magichat_format());
 
     let whitelist_mint_settings = config
         .whitelist_mint_settings
         .as_ref()
-        .map(|s| s.into_candy_format());
+        .map(|s| s.into_magichat_format());
 
     let hidden_settings = config
         .hidden_settings
         .as_ref()
-        .map(|s| s.into_candy_format());
+        .map(|s| s.into_magichat_format());
 
-    let gatekeeper = config.gatekeeper.as_ref().map(|g| g.into_candy_format());
+    let gatekeeper = config.gatekeeper.as_ref().map(|g| g.into_magichat_format());
 
     let price = parse_config_price(client, config)?;
 
@@ -198,11 +200,11 @@ fn create_candy_machine_data(
         .creators
         .clone()
         .into_iter()
-        .map(|c| c.into_candy_format())
-        .collect::<Result<Vec<mpl_candy_machine::Creator>>>()?;
+        .map(|c| c.into_magichat_format())
+        .collect::<Result<Vec<magic_hat::Creator>>>()?;
 
-    let data = CandyMachineData {
-        uuid: candy_machine.uuid,
+    let data = MagicHatData {
+        uuid: magic_hat.uuid,
         price,
         symbol: config.symbol.clone(),
         seller_fee_basis_points: config.seller_fee_basis_points,
