@@ -28,7 +28,7 @@ glob = "0.3.0"
 indexmap = { version = "1.8.0", features = ["serde"] }
 indicatif = { version = "0.16.2", features = ["rayon"] }
 mpl-token-metadata = "1.2.7"
-magic-hat = {git = "https://github.com/0xabstracted/magic-hat.git", version = "1.0.0", features = ["no-entrypoint"]}
+magic-hat = {git = "https://github.com/0xabstracted/magic-hat.git", features = ["no-entrypoint"]}
 num_cpus = "1.13.1"
 par-stream = { version = "0.10.0", features = ["runtime-tokio"] }
 rand = "0.7.0"
